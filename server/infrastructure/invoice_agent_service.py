@@ -92,27 +92,65 @@ class InvoiceAgentService(IInvoiceAgentService):
         Process user input using the invoice agent - API version
         Returns structured data instead of formatted strings
         """
-        # Get or create agent for this session
-        agent = self._get_agent_for_session(session.session_id)
-        
-        # Check if agent has the new API method
-        if hasattr(agent, 'process_user_input_api'):
-            # Use the new API-friendly method
-            response = agent.process_user_input_api(user_input)
-        else:
-            # Fallback for older agents - convert string response to dict
-            string_response = agent.process_user_input(user_input)
-            response = {
-                "success": True,
-                "action": "text_response",
-                "message": string_response,
-                "invoice_status": "processing"
-            }
-        
-        # Update session with agent data
-        await self._sync_agent_to_session(agent, session)
-        
-        return response
+        try:
+            # Get or create agent for this session
+            agent = self._get_agent_for_session(session.session_id)
+            
+            # Check if agent has the new API method
+            if hasattr(agent, 'process_user_input_api'):
+                # Use the new API-friendly method
+                response = agent.process_user_input_api(user_input)
+            else:
+                # Fallback for older agents - convert string response to dict
+                string_response = agent.process_user_input(user_input)
+                response = {
+                    "success": True,
+                    "action": "text_response",
+                    "message": string_response,
+                    "invoice_status": "processing"
+                }
+            
+            # Update session with agent data
+            await self._sync_agent_to_session(agent, session)
+            
+            return response
+            
+        except Exception as e:
+            error_str = str(e)
+            
+            # Handle specific API error cases
+            if "overloaded" in error_str.lower() or "529" in error_str:
+                return {
+                    "success": False,
+                    "action": "error",
+                    "message": "The AI service is temporarily overloaded. Please try again in a few minutes.",
+                    "error_type": "service_overloaded",
+                    "invoice_status": "error"
+                }
+            elif "rate limit" in error_str.lower():
+                return {
+                    "success": False,
+                    "action": "error", 
+                    "message": "Rate limit exceeded. Please wait a moment before trying again.",
+                    "error_type": "rate_limit",
+                    "invoice_status": "error"
+                }
+            elif "authentication" in error_str.lower() or "api_key" in error_str.lower():
+                return {
+                    "success": False,
+                    "action": "error",
+                    "message": "Authentication error. Please contact support.",
+                    "error_type": "authentication",
+                    "invoice_status": "error"
+                }
+            else:
+                return {
+                    "success": False,
+                    "action": "error",
+                    "message": f"An unexpected error occurred: {error_str}",
+                    "error_type": "unknown",
+                    "invoice_status": "error"
+                }
     
     async def get_session_metadata(self, session: ConversationSession) -> dict:
         """Get formatted session metadata"""
