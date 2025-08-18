@@ -1,0 +1,19 @@
+langchain>=0.1.0
+langchain-anthropic>=0.1.0
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+python-dateutil>=2.8.0
+setuptools>=45.0.0
+wheel>=0.37.0
+
+# FastAPI and server dependencies
+fastapi[standard]>=0.100.0
+uvicorn[standard]>=0.23.0
+httpx>=0.25.0
+
+# Data validation and serialization
+email-validator>=2.0.0
+
+# Development and testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
